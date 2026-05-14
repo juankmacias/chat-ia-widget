@@ -90,6 +90,49 @@
     return msg;
   }
 
+  const MEDIA_REGEX = /\[\[(audio|image|video):([a-z0-9-]+)\]\]/g;
+
+  function addMediaMessage(body, role, type, slug) {
+    const msg = el('div', 'chat-widget__msg chat-widget__msg--' + role + ' chat-widget__msg--media');
+    const url = '/media/' + type + '/' + slug;
+    let media;
+    if (type === 'audio') {
+      media = el('audio', 'chat-widget__audio');
+      media.controls = true;
+      media.preload = 'metadata';
+      media.src = url;
+    } else if (type === 'image') {
+      media = el('img', 'chat-widget__image');
+      media.src = url;
+      media.loading = 'lazy';
+      media.alt = slug;
+    } else if (type === 'video') {
+      media = el('video', 'chat-widget__video');
+      media.controls = true;
+      media.preload = 'metadata';
+      media.src = url;
+    }
+    msg.appendChild(media);
+    const time = el('div', 'chat-widget__time', timeNow());
+    msg.appendChild(time);
+    body.appendChild(msg);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function addBotResponse(body, text) {
+    const mediaItems = [];
+    let match;
+    MEDIA_REGEX.lastIndex = 0;
+    while ((match = MEDIA_REGEX.exec(text)) !== null) {
+      mediaItems.push({ type: match[1], slug: match[2] });
+    }
+    const cleanText = text.replace(MEDIA_REGEX, '').replace(/\s+/g, ' ').trim();
+    if (cleanText) addMessage(body, 'bot', cleanText);
+    for (const item of mediaItems) {
+      addMediaMessage(body, 'bot', item.type, item.slug);
+    }
+  }
+
   function showTyping(body) {
     const typing = el('div', 'chat-widget__typing');
     typing.appendChild(el('span'));
@@ -153,7 +196,7 @@
       try {
         const reply = await sendToBackend(text, sessionId);
         typing.remove();
-        addMessage(ui.body, 'bot', reply);
+        addBotResponse(ui.body, reply);
       } catch (err) {
         typing.remove();
         addMessage(ui.body, 'bot', 'Disculpa, hubo un error. Intenta de nuevo en un momento.');

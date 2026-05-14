@@ -192,6 +192,37 @@
   text-align: right;
 }
 
+/* Mensajes con media (audio, imagen, video) */
+.chat-widget__msg--media {
+  padding: 6px;
+  max-width: 85%;
+}
+
+.chat-widget__audio {
+  display: block;
+  width: 240px;
+  height: 40px;
+}
+
+.chat-widget__image {
+  display: block;
+  max-width: 240px;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.chat-widget__video {
+  display: block;
+  max-width: 260px;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  background: #000;
+}
+
 /* Indicador escribiendo */
 .chat-widget__typing {
   display: flex;

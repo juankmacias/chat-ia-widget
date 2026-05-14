@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const { getOrCreateConversation, getHistory, saveMessage } = require('./db');
@@ -18,6 +19,25 @@ app.use(cors({
   origin: process.env.ALLOWED_ORIGIN || '*',
 }));
 app.use(express.json({ limit: '100kb' }));
+
+const MEDIA_DIR = path.join(__dirname, 'public', 'media');
+const MEDIA_EXTS = {
+  audio: ['.mp3', '.ogg', '.m4a', '.wav'],
+  image: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+  video: ['.mp4', '.webm', '.mov'],
+};
+
+app.get('/media/:type/:slug', (req, res, next) => {
+  const { type, slug } = req.params;
+  const exts = MEDIA_EXTS[type];
+  if (!exts || !/^[a-z0-9-]+$/.test(slug)) return next();
+  for (const ext of exts) {
+    const filePath = path.join(MEDIA_DIR, type, slug + ext);
+    if (fs.existsSync(filePath)) return res.sendFile(filePath);
+  }
+  res.status(404).send('Media not found');
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/health', (_req, res) => {
