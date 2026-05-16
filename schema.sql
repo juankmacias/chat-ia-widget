@@ -7,9 +7,14 @@ CREATE TABLE IF NOT EXISTS conversations (
   visitor_name TEXT,
   visitor_email TEXT,
   user_agent TEXT,
+  ip TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   last_message_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migración idempotente para BDs ya creadas sin columna ip
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS ip TEXT;
+CREATE INDEX IF NOT EXISTS idx_conversations_ip ON conversations(ip);
 
 CREATE TABLE IF NOT EXISTS messages (
   id BIGSERIAL PRIMARY KEY,

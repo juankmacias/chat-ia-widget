@@ -5,11 +5,21 @@ const path = require('path');
 const fs = require('fs');
 const Anthropic = require('@anthropic-ai/sdk');
 
-const { getOrCreateConversation, getHistory, saveMessage } = require('./db');
+const {
+  getOrCreateConversation,
+  getHistory,
+  saveMessage,
+  countUserMessagesForSession,
+  countUserMessagesForIp,
+} = require('./db');
 const { SYSTEM_PROMPT } = require('./system-prompt');
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
+const MAX_USER_MESSAGES = 10;
+const LIMIT_REPLY =
+  'Llegamos al límite de mensajes por aquí 🙏. Para seguir tu consulta y atenderte personalmente, escríbeme directamente al WhatsApp 322 3671553 y te atiendo de una 😊.';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -59,7 +69,18 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const userAgent = req.headers['user-agent']?.slice(0, 300) ?? null;
-    const conversationId = await getOrCreateConversation(sessionId, userAgent);
+    const ip = (req.ip || req.socket?.remoteAddress || '').slice(0, 64) || null;
+    const conversationId = await getOrCreateConversation(sessionId, userAgent, ip);
+
+    const [countBySession, countByIp] = await Promise.all([
+      countUserMessagesForSession(sessionId),
+      countUserMessagesForIp(ip),
+    ]);
+    if (countBySession >= MAX_USER_MESSAGES || countByIp >= MAX_USER_MESSAGES) {
+      await saveMessage(conversationId, 'user', message);
+      await saveMessage(conversationId, 'assistant', LIMIT_REPLY);
+      return res.json({ reply: LIMIT_REPLY, limit_reached: true });
+    }
 
     const history = await getHistory(conversationId, 20);
     const apiMessages = [

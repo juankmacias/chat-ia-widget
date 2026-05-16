@@ -11,23 +11,44 @@ pool.on('error', (err) => {
   console.error('Error inesperado en pool de Postgres:', err);
 });
 
-async function getOrCreateConversation(sessionId, userAgent) {
+async function getOrCreateConversation(sessionId, userAgent, ip) {
   const existing = await pool.query(
     'SELECT id FROM conversations WHERE session_id = $1',
     [sessionId]
   );
   if (existing.rows.length > 0) {
     await pool.query(
-      'UPDATE conversations SET last_message_at = NOW() WHERE id = $1',
-      [existing.rows[0].id]
+      'UPDATE conversations SET last_message_at = NOW(), ip = COALESCE(ip, $2) WHERE id = $1',
+      [existing.rows[0].id, ip]
     );
     return existing.rows[0].id;
   }
   const created = await pool.query(
-    'INSERT INTO conversations (session_id, user_agent) VALUES ($1, $2) RETURNING id',
-    [sessionId, userAgent]
+    'INSERT INTO conversations (session_id, user_agent, ip) VALUES ($1, $2, $3) RETURNING id',
+    [sessionId, userAgent, ip]
   );
   return created.rows[0].id;
+}
+
+async function countUserMessagesForSession(sessionId) {
+  const result = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM messages m
+     JOIN conversations c ON c.id = m.conversation_id
+     WHERE c.session_id = $1 AND m.role = 'user'`,
+    [sessionId]
+  );
+  return result.rows[0].n;
+}
+
+async function countUserMessagesForIp(ip) {
+  if (!ip) return 0;
+  const result = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM messages m
+     JOIN conversations c ON c.id = m.conversation_id
+     WHERE c.ip = $1 AND m.role = 'user'`,
+    [ip]
+  );
+  return result.rows[0].n;
 }
 
 async function getHistory(conversationId, limit = 20) {
@@ -54,4 +75,6 @@ module.exports = {
   getOrCreateConversation,
   getHistory,
   saveMessage,
+  countUserMessagesForSession,
+  countUserMessagesForIp,
 };

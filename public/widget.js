@@ -45,9 +45,11 @@
 
     // Header
     const header = el('div', 'chat-widget__header');
-    const avatar = el('div', 'chat-widget__avatar', CONFIG.botInitial);
+    const avatar = el('div', 'chat-widget__avatar');
+    avatar.textContent = CONFIG.botInitial;
     const info = el('div', 'chat-widget__header-info');
-    info.appendChild(el('div', 'chat-widget__name', CONFIG.botName));
+    const nameEl = el('div', 'chat-widget__name', CONFIG.botName);
+    info.appendChild(nameEl);
     info.appendChild(el('div', 'chat-widget__status', 'en línea'));
     const closeBtn = el('button', 'chat-widget__close', '×');
     closeBtn.setAttribute('aria-label', 'Cerrar chat');
@@ -77,7 +79,7 @@
     root.appendChild(btn);
     document.body.appendChild(root);
 
-    return { root, btn, win, body, input, sendBtn, closeBtn };
+    return { root, btn, win, body, input, sendBtn, closeBtn, headerAvatar: avatar, headerName: nameEl };
   }
 
   function addMessage(body, role, text) {
@@ -120,9 +122,51 @@
   }
 
   const SPLIT_REGEX = /\[\[split\]\]/gi;
+  const HANDOFF_REGEX = /\[\[handoff:([a-z0-9-]+)\]\]/i;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  async function addBotResponse(body, text) {
+  const HANDOFF_AGENTS = {
+    maleja: {
+      name: 'Maleja',
+      avatar: '/media/image/maleja.png',
+      joinedMessage: 'Maleja se unió al chat',
+      greeting: 'En qué te puedo guiar?',
+    },
+  };
+
+  function addSystemNotice(body, text) {
+    const notice = el('div', 'chat-widget__system', text);
+    body.appendChild(notice);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function switchAgent(ui, agent) {
+    ui.headerName.textContent = agent.name;
+    ui.headerAvatar.textContent = '';
+    ui.headerAvatar.classList.add('chat-widget__avatar--image');
+    ui.headerAvatar.style.backgroundImage = 'url(' + agent.avatar + ')';
+  }
+
+  async function runHandoff(ui, agent) {
+    addSystemNotice(ui.body, agent.joinedMessage);
+    switchAgent(ui, agent);
+    const typing = showTyping(ui.body);
+    await sleep(1000);
+    typing.remove();
+    addMessage(ui.body, 'bot', agent.greeting);
+  }
+
+  async function addBotResponse(ui, text) {
+    const handoffMatch = text.match(HANDOFF_REGEX);
+    if (handoffMatch) {
+      const agent = HANDOFF_AGENTS[handoffMatch[1].toLowerCase()];
+      if (agent) {
+        await runHandoff(ui, agent);
+        return;
+      }
+    }
+
+    const body = ui.body;
     const mediaItems = [];
     let match;
     MEDIA_REGEX.lastIndex = 0;
@@ -170,8 +214,7 @@
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Error en el servidor');
     }
-    const data = await res.json();
-    return data.reply;
+    return res.json();
   }
 
   function init() {
@@ -179,6 +222,14 @@
     const sessionId = getSessionId();
     let isOpen = false;
     let isSending = false;
+    let isLocked = false;
+
+    function lockChat() {
+      isLocked = true;
+      ui.input.disabled = true;
+      ui.sendBtn.disabled = true;
+      ui.input.placeholder = 'Chat cerrado — escribe al WhatsApp 322 3671553';
+    }
 
     // Mensaje de bienvenida
     addMessage(ui.body, 'bot', CONFIG.welcomeMessage);
@@ -200,7 +251,7 @@
 
     async function send() {
       const text = ui.input.value.trim();
-      if (!text || isSending) return;
+      if (!text || isSending || isLocked) return;
 
       isSending = true;
       ui.sendBtn.disabled = true;
@@ -211,17 +262,18 @@
       const typing = showTyping(ui.body);
 
       try {
-        const reply = await sendToBackend(text, sessionId);
+        const data = await sendToBackend(text, sessionId);
         typing.remove();
-        await addBotResponse(ui.body, reply);
+        await addBotResponse(ui, data.reply);
+        if (data.limit_reached) lockChat();
       } catch (err) {
         typing.remove();
         addMessage(ui.body, 'bot', 'Ups, algo falló 😅. Pero no te preocupes, escríbeme directamente al WhatsApp 322 3671553 y te atiendo de una.');
         console.error('[chat-widget]', err);
       } finally {
         isSending = false;
-        ui.sendBtn.disabled = false;
-        ui.input.focus();
+        if (!isLocked) ui.sendBtn.disabled = false;
+        if (!isLocked) ui.input.focus();
       }
     }
 
