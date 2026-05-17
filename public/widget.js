@@ -3,10 +3,10 @@
 
   const CONFIG = {
     apiUrl: window.CHAT_WIDGET_API_URL || '/api/chat',
-    botName: window.CHAT_WIDGET_BOT_NAME || 'Asistente',
-    botInitial: window.CHAT_WIDGET_BOT_INITIAL || 'A',
+    botName: window.CHAT_WIDGET_BOT_NAME || 'Maleja',
+    botAvatar: window.CHAT_WIDGET_BOT_AVATAR || '/media/image/maleja.png',
     welcomeMessage:
-      window.CHAT_WIDGET_WELCOME || '¡Hola! 👋 ¿En qué puedo ayudarte hoy?',
+      window.CHAT_WIDGET_WELCOME || 'Hola, soy Maleja, la asistente de IA de PowerMix 😊. ¿En qué te puedo ayudar?',
   };
 
   function getSessionId() {
@@ -46,10 +46,9 @@
     // Header
     const header = el('div', 'chat-widget__header');
     const avatar = el('div', 'chat-widget__avatar');
-    avatar.textContent = CONFIG.botInitial;
+    avatar.style.backgroundImage = 'url(' + CONFIG.botAvatar + ')';
     const info = el('div', 'chat-widget__header-info');
-    const nameEl = el('div', 'chat-widget__name', CONFIG.botName);
-    info.appendChild(nameEl);
+    info.appendChild(el('div', 'chat-widget__name', CONFIG.botName));
     info.appendChild(el('div', 'chat-widget__status', 'en línea'));
     const closeBtn = el('button', 'chat-widget__close', '×');
     closeBtn.setAttribute('aria-label', 'Cerrar chat');
@@ -79,7 +78,7 @@
     root.appendChild(btn);
     document.body.appendChild(root);
 
-    return { root, btn, win, body, input, sendBtn, closeBtn, headerAvatar: avatar, headerName: nameEl };
+    return { root, btn, win, body, input, sendBtn, closeBtn };
   }
 
   function addMessage(body, role, text) {
@@ -122,50 +121,9 @@
   }
 
   const SPLIT_REGEX = /\[\[split\]\]/gi;
-  const HANDOFF_REGEX = /\[\[handoff:([a-z0-9-]+)\]\]/i;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  const HANDOFF_AGENTS = {
-    maleja: {
-      name: 'Maleja',
-      avatar: '/media/image/maleja.png',
-      joinedMessage: 'Maleja se unió al chat',
-      greeting: 'En qué te puedo guiar?',
-    },
-  };
-
-  function addSystemNotice(body, text) {
-    const notice = el('div', 'chat-widget__system', text);
-    body.appendChild(notice);
-    body.scrollTop = body.scrollHeight;
-  }
-
-  function switchAgent(ui, agent) {
-    ui.headerName.textContent = agent.name;
-    ui.headerAvatar.textContent = '';
-    ui.headerAvatar.classList.add('chat-widget__avatar--image');
-    ui.headerAvatar.style.backgroundImage = 'url(' + agent.avatar + ')';
-  }
-
-  async function runHandoff(ui, agent) {
-    addSystemNotice(ui.body, agent.joinedMessage);
-    switchAgent(ui, agent);
-    const typing = showTyping(ui.body);
-    await sleep(1000);
-    typing.remove();
-    addMessage(ui.body, 'bot', agent.greeting);
-  }
-
   async function addBotResponse(ui, text) {
-    const handoffMatch = text.match(HANDOFF_REGEX);
-    if (handoffMatch) {
-      const agent = HANDOFF_AGENTS[handoffMatch[1].toLowerCase()];
-      if (agent) {
-        await runHandoff(ui, agent);
-        return;
-      }
-    }
-
     const body = ui.body;
     const mediaItems = [];
     let match;

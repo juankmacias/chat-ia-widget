@@ -96,20 +96,10 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #25D366;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 18px;
-  color: white;
+  background-color: #ddd;
   background-size: cover;
   background-position: center;
   flex-shrink: 0;
-}
-
-.chat-widget__avatar--image {
-  background-color: #ddd;
 }
 
 .chat-widget__header-info {
@@ -228,20 +218,6 @@
   height: auto;
   border-radius: 6px;
   background: #000;
-}
-
-/* Notificación de sistema (handoff, etc.) */
-.chat-widget__system {
-  align-self: center;
-  background: rgba(225, 245, 254, 0.92);
-  color: #2c5566;
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  margin: 8px 0;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
-  text-align: center;
-  max-width: 85%;
 }
 
 /* Indicador escribiendo */
