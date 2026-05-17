@@ -195,10 +195,112 @@
   max-width: 85%;
 }
 
-.chat-widget__audio {
-  display: block;
-  width: 240px;
-  height: 40px;
+/* Nota de voz estilo WhatsApp */
+.chat-widget__msg--voice {
+  padding: 6px 10px;
+  max-width: 85%;
+  width: 280px;
+}
+
+.chat-widget__voice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-widget__voice-avatar {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: #ddd;
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.chat-widget__voice-mic {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: #25D366;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+.chat-widget__voice-mic svg {
+  width: 9px;
+  height: 9px;
+  fill: white;
+}
+
+.chat-widget__voice-play {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #54656f;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.chat-widget__voice-play:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.chat-widget__voice-play svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.chat-widget__voice-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chat-widget__voice-waveform {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.chat-widget__voice-bar {
+  flex: 1;
+  background: #B0BEC5;
+  border-radius: 1px;
+  min-height: 20%;
+  transition: background 0.08s linear;
+}
+
+.chat-widget__voice-bar--played {
+  background: #25D366;
+}
+
+.chat-widget__voice-time {
+  font-size: 11px;
+  color: #667781;
+  line-height: 1;
+}
+
+.chat-widget__voice audio {
+  display: none;
 }
 
 .chat-widget__image {
@@ -218,6 +320,46 @@
   height: auto;
   border-radius: 6px;
   background: #000;
+}
+
+/* Botón CTA WhatsApp (handoff a asesor humano) */
+.chat-widget__msg--cta {
+  padding: 8px;
+  background: transparent;
+  box-shadow: none;
+  max-width: 85%;
+}
+
+.chat-widget__wa-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #25D366;
+  color: white;
+  text-decoration: none;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.chat-widget__wa-cta:hover {
+  background: #1eb854;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 211, 102, 0.45);
+}
+
+.chat-widget__wa-cta-icon {
+  width: 22px;
+  height: 22px;
+  fill: white;
+  flex-shrink: 0;
+}
+
+.chat-widget__wa-cta-label {
+  white-space: nowrap;
 }
 
 /* Indicador escribiendo */
