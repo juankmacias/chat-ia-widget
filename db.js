@@ -35,7 +35,8 @@ async function countUserMessagesForSession(sessionId) {
   const result = await pool.query(
     `SELECT COUNT(*)::int AS n FROM messages m
      JOIN conversations c ON c.id = m.conversation_id
-     WHERE c.session_id = $1 AND m.role = 'user'`,
+     WHERE c.session_id = $1 AND m.role = 'user'
+       AND m.created_at >= NOW() - INTERVAL '24 hours'`,
     [sessionId]
   );
   return result.rows[0].n;
@@ -46,7 +47,8 @@ async function countUserMessagesForIp(ip) {
   const result = await pool.query(
     `SELECT COUNT(*)::int AS n FROM messages m
      JOIN conversations c ON c.id = m.conversation_id
-     WHERE c.ip = $1 AND m.role = 'user'`,
+     WHERE c.ip = $1 AND m.role = 'user'
+       AND m.created_at >= NOW() - INTERVAL '24 hours'`,
     [ip]
   );
   return result.rows[0].n;

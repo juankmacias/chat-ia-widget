@@ -19,7 +19,7 @@ const { SYSTEM_PROMPT } = require('./system-prompt');
 const { MAX_USER_MESSAGES } = require('./config');
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const LIMIT_REPLY =
   'Llegamos al límite de mensajes por aquí 🙏. Para seguir tu consulta y atenderte personalmente, escríbeme directamente al WhatsApp 322 3671553 y te atiendo de una 😊.';
@@ -29,7 +29,7 @@ const anthropic = new Anthropic({
 });
 
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || '*',
+  origin: process.env.ALLOWED_ORIGIN || false,
 }));
 app.use(express.json({ limit: '100kb' }));
 
@@ -94,9 +94,9 @@ app.post('/api/chat', async (req, res) => {
     await saveMessage(conversationId, 'user', message);
 
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-7',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: apiMessages,
     });
 

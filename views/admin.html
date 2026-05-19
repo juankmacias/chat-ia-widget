@@ -286,13 +286,14 @@
         return;
       }
 
+      const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       const tbody = rows.map((c) => {
         const atLimit = (c.user_messages || 0) >= maxMessages;
         return `
-          <tr data-id="${c.id}" data-session="${c.session_id}" data-ip="${c.ip || ''}" data-created="${c.created_at}">
+          <tr data-id="${esc(c.id)}" data-session="${esc(c.session_id)}" data-ip="${esc(c.ip || '')}" data-created="${esc(c.created_at)}">
             <td>${fmtDate(c.last_message_at)}</td>
-            <td><code style="font-size:11px;">${c.session_id.slice(0, 24)}…</code></td>
-            <td>${c.ip || '—'}</td>
+            <td><code style="font-size:11px;">${esc(c.session_id.slice(0, 24))}…</code></td>
+            <td>${esc(c.ip || '—')}</td>
             <td>${c.user_messages}/${c.total_messages}</td>
             <td>${atLimit
               ? '<span class="badge badge--limit">Al límite</span>'
@@ -325,9 +326,10 @@
 
     async function openDetail(id, session, ip, created) {
       document.getElementById('drawer-title').textContent = 'Conversación';
+      const esc2 = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       document.getElementById('drawer-meta').innerHTML =
-        `<div>Sesión: <code>${session.slice(0, 32)}</code></div>` +
-        `<div>IP: ${ip || '—'} · Iniciada: ${fmtDate(created)}</div>`;
+        `<div>Sesión: <code>${esc2(session.slice(0, 32))}</code></div>` +
+        `<div>IP: ${esc2(ip || '—')} · Iniciada: ${fmtDate(created)}</div>`;
       const messagesEl = document.getElementById('messages');
       messagesEl.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">Cargando…</div>';
       document.getElementById('drawer').classList.add('open');
