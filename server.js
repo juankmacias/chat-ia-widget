@@ -11,13 +11,16 @@ const {
   saveMessage,
   countUserMessagesForSession,
   countUserMessagesForIp,
+  listConversations,
+  getConversationMessages,
+  getAdminStats,
 } = require('./db');
 const { SYSTEM_PROMPT } = require('./system-prompt');
+const { MAX_USER_MESSAGES } = require('./config');
 
 const app = express();
 app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
-const MAX_USER_MESSAGES = 10;
 const LIMIT_REPLY =
   'Llegamos al límite de mensajes por aquí 🙏. Para seguir tu consulta y atenderte personalmente, escríbeme directamente al WhatsApp 322 3671553 y te atiendo de una 😊.';
 
@@ -115,6 +118,62 @@ app.post('/api/chat', async (req, res) => {
       });
     }
     res.status(500).json({ error: 'Error interno', detail: err.message });
+  }
+});
+
+function adminAuth(req, res, next) {
+  const user = process.env.ADMIN_USER;
+  const pass = process.env.ADMIN_PASS;
+  if (!user || !pass) {
+    return res.status(500).send('ADMIN_USER y ADMIN_PASS no configurados en .env');
+  }
+  const expected = 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64');
+  if (req.headers.authorization !== expected) {
+    res.set('WWW-Authenticate', 'Basic realm="PowerMix Admin"');
+    return res.status(401).send('Auth required');
+  }
+  next();
+}
+
+app.get('/admin', adminAuth, (_req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'admin.html'));
+});
+
+app.get('/api/admin/stats', adminAuth, async (_req, res) => {
+  try {
+    const stats = await getAdminStats();
+    res.json(stats);
+  } catch (err) {
+    console.error('Error en /api/admin/stats:', err);
+    res.status(500).json({ error: 'Error', detail: err.message });
+  }
+});
+
+app.get('/api/admin/conversations', adminAuth, async (req, res) => {
+  try {
+    const { limit, offset, from, to, ip, at_limit } = req.query;
+    const rows = await listConversations({
+      limit: limit ? Math.min(parseInt(limit, 10), 200) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+      from: from || undefined,
+      to: to || undefined,
+      ip: ip || undefined,
+      atLimit: at_limit === 'true' ? true : at_limit === 'false' ? false : undefined,
+    });
+    res.json(rows);
+  } catch (err) {
+    console.error('Error en /api/admin/conversations:', err);
+    res.status(500).json({ error: 'Error', detail: err.message });
+  }
+});
+
+app.get('/api/admin/conversations/:id/messages', adminAuth, async (req, res) => {
+  try {
+    const messages = await getConversationMessages(req.params.id);
+    res.json(messages);
+  } catch (err) {
+    console.error('Error en /api/admin/conversations/:id/messages:', err);
+    res.status(500).json({ error: 'Error', detail: err.message });
   }
 });
 

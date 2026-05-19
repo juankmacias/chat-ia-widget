@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { MAX_USER_MESSAGES } = require('./config');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -70,6 +71,64 @@ async function saveMessage(conversationId, role, content, usage = {}) {
   );
 }
 
+async function listConversations(filters = {}) {
+  const { limit = 50, offset = 0, from, to, ip, atLimit } = filters;
+  const conditions = [];
+  const params = [];
+  let p = 1;
+
+  if (from) { conditions.push(`c.last_message_at >= $${p++}`); params.push(from); }
+  if (to) { conditions.push(`c.last_message_at <= $${p++}`); params.push(to); }
+  if (ip) { conditions.push(`c.ip = $${p++}`); params.push(ip); }
+
+  const whereClause = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+  let havingClause = '';
+  if (atLimit === true) havingClause = `HAVING COUNT(m.id) FILTER (WHERE m.role = 'user') >= ${MAX_USER_MESSAGES}`;
+  else if (atLimit === false) havingClause = `HAVING COUNT(m.id) FILTER (WHERE m.role = 'user') < ${MAX_USER_MESSAGES}`;
+
+  const sql = `
+    SELECT c.id, c.session_id, c.ip, c.user_agent, c.created_at, c.last_message_at,
+           COUNT(m.id)::int AS total_messages,
+           COUNT(m.id) FILTER (WHERE m.role = 'user')::int AS user_messages
+    FROM conversations c
+    LEFT JOIN messages m ON m.conversation_id = c.id
+    ${whereClause}
+    GROUP BY c.id
+    ${havingClause}
+    ORDER BY c.last_message_at DESC NULLS LAST
+    LIMIT $${p++} OFFSET $${p}
+  `;
+  params.push(limit, offset);
+  const result = await pool.query(sql, params);
+  return result.rows;
+}
+
+async function getConversationMessages(conversationId) {
+  const result = await pool.query(
+    `SELECT role, content, created_at, tokens_input, tokens_output
+     FROM messages
+     WHERE conversation_id = $1
+     ORDER BY created_at ASC`,
+    [conversationId]
+  );
+  return result.rows;
+}
+
+async function getAdminStats() {
+  const result = await pool.query(`
+    SELECT
+      (SELECT COUNT(*)::int FROM conversations) AS total_conversations,
+      (SELECT COUNT(*)::int FROM messages WHERE created_at >= CURRENT_DATE) AS messages_today,
+      (SELECT COUNT(*)::int FROM messages) AS total_messages,
+      (SELECT COUNT(*)::int FROM conversations c
+        WHERE (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.role = 'user') >= ${MAX_USER_MESSAGES}
+      ) AS at_limit_conversations
+  `);
+  const stats = result.rows[0];
+  stats.max_messages = MAX_USER_MESSAGES;
+  return stats;
+}
+
 module.exports = {
   pool,
   getOrCreateConversation,
@@ -77,4 +136,7 @@ module.exports = {
   saveMessage,
   countUserMessagesForSession,
   countUserMessagesForIp,
+  listConversations,
+  getConversationMessages,
+  getAdminStats,
 };
